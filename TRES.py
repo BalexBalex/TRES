@@ -24,7 +24,7 @@ import numpy as np
 
 REPORT_USER_WARNINGS = True
 
-REPORT_DEBUG = False
+REPORT_DEBUG = True
 REPORT_DT = False 
 REPORT_SN_EVOLUTION = False
 REPORT_TRIPLE_EVOLUTION = False 
@@ -75,7 +75,7 @@ class Triple_Class:
             inner_argument_of_pericenter, outer_argument_of_pericenter,
             inner_longitude_of_ascending_node, 
             metallicity, tend, tinit, number, maximum_radius_change_factor, 
-            stop_at_mass_transfer, stop_at_init_mass_transfer, stop_at_outer_mass_transfer,
+            stop_at_mass_transfer, eccentric_mt, stop_at_init_mass_transfer, stop_at_outer_mass_transfer,
             stop_at_stable_mass_transfer, stop_at_eccentric_stable_mass_transfer,
             stop_at_unstable_mass_transfer, stop_at_eccentric_unstable_mass_transfer,
             stop_at_merger, stop_at_disintegrated, stop_at_inner_collision, stop_at_outer_collision, 
@@ -194,7 +194,7 @@ class Triple_Class:
         self.update_previous_stellar_parameters()
         
 
-    def set_stopping_conditions(self, stop_at_mass_transfer,stop_at_init_mass_transfer,stop_at_outer_mass_transfer,
+    def set_stopping_conditions(self, stop_at_mass_transfer, eccentric_mt, stop_at_init_mass_transfer,stop_at_outer_mass_transfer,
             stop_at_stable_mass_transfer, stop_at_eccentric_stable_mass_transfer,
             stop_at_unstable_mass_transfer, stop_at_eccentric_unstable_mass_transfer,
             stop_at_merger, stop_at_disintegrated, stop_at_inner_collision, stop_at_outer_collision, 
@@ -210,7 +210,8 @@ class Triple_Class:
             sys.exit('stop_at_dynamical_instability = False not possible. Unstable triples can not be simulated using the secular equations as used in TRES. Further evolution should be done by other means, e.g. one of the N-body codes implemented in AMUSE.') 
 
                             
-        self.stop_at_mass_transfer = stop_at_mass_transfer            
+        self.stop_at_mass_transfer = stop_at_mass_transfer
+        self.eccentric_mt          = eccentric_mt
         self.stop_at_init_mass_transfer = stop_at_init_mass_transfer
         self.stop_at_outer_mass_transfer = stop_at_outer_mass_transfer            
 
@@ -264,7 +265,7 @@ class Triple_Class:
         bins[0].eccentricity = inner_eccentricity
         bins[0].argument_of_pericenter = inner_argument_of_pericenter
         bins[0].longitude_of_ascending_node = inner_longitude_of_ascending_node
-        
+        stop
         bins[0].mass_transfer_rate = 0.0 | units.MSun/units.yr
         bins[0].accretion_efficiency_mass_transfer = 1.0
         bins[0].accretion_efficiency_wind_child1_to_child2 = 0.0
@@ -1465,7 +1466,10 @@ class Triple_Class:
         time_step_tides = np.inf |units.Myr 
 	#interesting alternative, slows down code 
 #        if self.secular_code.parameters.include_inner_tidal_terms or self.secular_code.parameters.include_outer_tidal_terms:    
-#             time_step_tides = self.determine_time_step_tides()  	
+#             time_step_tides = self.determine_time_step_tides()
+
+
+        #XXX Add here -> Time step for secular eccentricity evolution
                 
         if REPORT_DT or REPORT_DEBUG:
             print('time:', time_step_max, time_step_stellar_code, time_step_wind, time_step_radius_change, time_step_tides)
@@ -1882,6 +1886,7 @@ class Triple_Class:
 
     #-------
     #evolution
+    #XXX: Make sure this is not called too often for eccentric MT
     def resolve_stellar_interaction(self, stellar_system = None):
     # the most inner binary is calculated first, and then move outwards
 
@@ -2165,7 +2170,7 @@ class Triple_Class:
             
                 if REPORT_TRIPLE_EVOLUTION:
                     print('Mass transfer in inner binary at time = ',self.triple.time)
-                    print(self.stop_at_mass_transfer,self.stop_at_stable_mass_transfer, self.stop_at_unstable_mass_transfer, self.stop_at_eccentric_stable_mass_transfer, self.stop_at_eccentric_unstable_mass_transfer, stellar_system.is_mt_stable)
+                    print(self.stop_at_mass_transfer,self.eccentricMT,self.stop_at_stable_mass_transfer, self.stop_at_unstable_mass_transfer, self.stop_at_eccentric_stable_mass_transfer, self.stop_at_eccentric_unstable_mass_transfer, stellar_system.is_mt_stable)
                 if self.is_binary(self.triple.child2):
                     self.triple.child2.bin_type = bin_type['rlof'] 
                 elif self.is_binary(self.triple.child1):
@@ -3338,9 +3343,9 @@ def main(inner_primary_mass= 1.3|units.MSun, inner_secondary_mass= 0.5|units.MSu
             relative_inclination= 80.0*np.pi/180.0,
             inner_argument_of_pericenter= 0.1, outer_argument_of_pericenter= 0.5,
             inner_longitude_of_ascending_node= 0.0,
-            metallicity= 0.02, tend= 5.0 |units.Myr, 
+            metallicity= 0.02, tend= 5.0 |units.Myr, tinit=0.0 |units.Myr,
             number = 0, maximum_radius_change_factor = 0.005,
-            stop_at_mass_transfer = True, stop_at_init_mass_transfer = True, stop_at_outer_mass_transfer = True,
+            stop_at_mass_transfer = True, eccentric_mt = False,stop_at_init_mass_transfer = True, stop_at_outer_mass_transfer = True,
             stop_at_stable_mass_transfer = True, stop_at_eccentric_stable_mass_transfer = True,
             stop_at_unstable_mass_transfer = False, stop_at_eccentric_unstable_mass_transfer = False,
             stop_at_merger = True, stop_at_disintegrated = True, stop_at_inner_collision = True, stop_at_outer_collision = True, 
@@ -3371,7 +3376,7 @@ def main(inner_primary_mass= 1.3|units.MSun, inner_secondary_mass= 0.5|units.MSu
             inner_longitude_of_ascending_node, 
             metallicity, tend, tinit,
             number, maximum_radius_change_factor,  
-            stop_at_mass_transfer, stop_at_init_mass_transfer, stop_at_outer_mass_transfer,
+            stop_at_mass_transfer, eccentric_mt, stop_at_init_mass_transfer, stop_at_outer_mass_transfer,
             stop_at_stable_mass_transfer, stop_at_eccentric_stable_mass_transfer,
             stop_at_unstable_mass_transfer, stop_at_eccentric_unstable_mass_transfer,
             stop_at_merger, stop_at_disintegrated, stop_at_inner_collision, stop_at_outer_collision, 
@@ -3470,6 +3475,9 @@ def parse_arguments():
     parser.add_option("-t", "-T", unit=units.Myr, 
                       dest="tend", type="float", default = 5.0 |units.Myr,
                       help="end time [%default] %unit")
+    parser.add_option("-t0", "-T0", unit=units.Myr,
+                      dest="tinit", type="float", default = 0.0 |units.Myr,
+                      help="start time (fast pre-evolution) [%default] %unit")
     parser.add_option("--initial_time", unit=units.Myr, 
                       dest="tinit", type="float", default = 0.0 |units.Myr,
                       help="initial time [%default] %unit")
@@ -3483,6 +3491,8 @@ def parse_arguments():
 
     parser.add_option("--no_stop_at_mass_transfer", dest="stop_at_mass_transfer", action="store_false", default = True,
                       help="stop at mass transfer [%default] %unit")
+    parser.add_option("--eccentric_MT", dest="do_eccentric_MT", action="store_false", default = True,
+                      help="whether to continue into the eccentric MT evolutoin [%default] %unit")
     parser.add_option("--no_stop_at_init_mass_transfer", dest="stop_at_init_mass_transfer", action="store_false", default = True,
                       help="stop if initially mass transfer[%default] %unit")
     parser.add_option("--no_stop_at_outer_mass_transfer", dest="stop_at_outer_mass_transfer", action="store_false", default = True,
